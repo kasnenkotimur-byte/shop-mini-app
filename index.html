@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Кав'ярня — замовлення</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg2: var(--tg-theme-secondary-bg-color, #f1f1f4);
+    --section: var(--tg-theme-section-bg-color, #ffffff);
+    --text: var(--tg-theme-text-color, #000000);
+    --hint: var(--tg-theme-hint-color, #8e8e93);
+    --accent: var(--tg-theme-button-color, #2481cc);
+    --accent-text: var(--tg-theme-button-text-color, #ffffff);
+    --header: var(--tg-theme-section-header-text-color, #6d6d72);
+    --destructive: var(--tg-theme-destructive-text-color, #e53935);
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; background: var(--bg2); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+  }
+  .app { max-width: 560px; margin: 0 auto; padding-bottom: 110px; }
+  .hidden { display: none !important; }
+
+  /* Шапка */
+  .top { padding: 18px 16px 6px; display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+    background: linear-gradient(135deg, #c77d4a, #7a4a2a);
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+  }
+  .top h1 { margin: 0; font-size: 20px; font-weight: 700; }
+  .top p { margin: 2px 0 0; color: var(--hint); font-size: 13px; }
+
+  /* Категорії */
+  .cats {
+    display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px; scrollbar-width: none;
+    position: sticky; top: 0; z-index: 5; background: var(--bg2);
+  }
+  .cats::-webkit-scrollbar { display: none; }
+  .cat {
+    flex: 0 0 auto; padding: 8px 16px; border-radius: 20px; background: var(--section);
+    font-size: 15px; font-weight: 500; cursor: pointer; transition: .2s; white-space: nowrap;
+  }
+  .cat.sel { background: var(--accent); color: var(--accent-text); }
+
+  /* Сітка товарів */
+  .section-title {
+    padding: 10px 20px 8px; font-size: 13px; text-transform: uppercase;
+    letter-spacing: .03em; color: var(--header);
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; }
+  .card {
+    background: var(--section); border-radius: var(--radius); overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .pic {
+    height: 112px; display: flex; align-items: center; justify-content: center;
+    font-size: 54px; position: relative;
+  }
+  .badge {
+    position: absolute; top: 8px; right: 8px; min-width: 26px; height: 26px; padding: 0 7px;
+    border-radius: 13px; background: var(--accent); color: var(--accent-text);
+    font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    animation: pop .25s ease;
+  }
+  @keyframes pop { from { transform: scale(.4); } to { transform: scale(1); } }
+  .body { padding: 10px 12px 12px; display: flex; flex-direction: column; flex: 1; }
+  .name { font-weight: 600; font-size: 15px; line-height: 1.25; }
+  .desc { font-size: 12px; color: var(--hint); margin-top: 3px; line-height: 1.3; flex: 1; }
+  .row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; gap: 6px; }
+  .price { font-weight: 700; font-size: 16px; white-space: nowrap; }
+  .add {
+    border: 0; border-radius: 10px; padding: 7px 14px; font-size: 14px; font-weight: 600;
+    background: var(--accent); color: var(--accent-text); cursor: pointer; font-family: inherit;
+  }
+  .qty { display: flex; align-items: center; gap: 4px; }
+  .qty button {
+    width: 30px; height: 30px; border: 0; border-radius: 9px; font-size: 18px; font-weight: 600;
+    background: var(--bg2); color: var(--text); cursor: pointer; font-family: inherit; line-height: 1;
+  }
+  .qty button.plus { background: var(--accent); color: var(--accent-text); }
+  .qty span { min-width: 20px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* Оформлення */
+  .card-list { background: var(--section); margin: 0 16px; border-radius: var(--radius); overflow: hidden; }
+  .line { display: flex; align-items: center; gap: 12px; padding: 10px 14px; position: relative; }
+  .line + .line::before {
+    content: ""; position: absolute; top: 0; left: 66px; right: 0; height: 1px; background: var(--hint); opacity: .2;
+  }
+  .line .mini {
+    width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+  }
+  .line .info { flex: 1; min-width: 0; }
+  .line .info .n { font-weight: 500; }
+  .line .info .s { font-size: 13px; color: var(--hint); }
+  .seg { display: flex; background: var(--section); margin: 0 16px; border-radius: 12px; padding: 3px; }
+  .seg div {
+    flex: 1; text-align: center; padding: 9px 0; border-radius: 10px; font-weight: 500; cursor: pointer; transition: .2s;
+    font-size: 15px;
+  }
+  .seg div.sel { background: var(--accent); color: var(--accent-text); }
+  .field { padding: 4px 16px; position: relative; }
+  .field + .field::before {
+    content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--hint); opacity: .2;
+  }
+  .field label { display: block; font-size: 12px; color: var(--hint); padding-top: 8px; }
+  .field input, .field textarea {
+    width: 100%; border: 0; outline: 0; background: transparent; color: var(--text);
+    font-size: 16px; padding: 4px 0 10px; font-family: inherit; resize: none;
+  }
+  .field input::placeholder, .field textarea::placeholder { color: var(--hint); opacity: .6; }
+  .err { color: var(--destructive); font-size: 13px; padding: 8px 20px 0; min-height: 20px; }
+  .sum { padding: 4px 16px; }
+  .sum .r { display: flex; justify-content: space-between; padding: 9px 0; }
+  .sum .r + .r { border-top: 1px solid rgba(142,142,147,.2); }
+  .sum .k { color: var(--hint); }
+  .sum .total .v { font-size: 19px; font-weight: 700; color: var(--accent); }
+  .note { text-align: center; color: var(--hint); font-size: 13px; padding: 14px 24px 0; }
+  .empty { text-align: center; color: var(--hint); padding: 40px 20px; }
+
+  .fallback-btn {
+    position: fixed; left: 16px; right: 16px; bottom: 16px; max-width: 528px; margin: 0 auto;
+    padding: 15px; border: 0; border-radius: 12px; font-size: 16px; font-weight: 600;
+    background: var(--accent); color: var(--accent-text); display: none; font-family: inherit;
+  }
+  .fallback-btn:disabled { opacity: .4; }
+  .back-link { padding: 14px 16px 0; color: var(--accent); cursor: pointer; font-weight: 500; display: none; }
+  .fade { animation: fade .25s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Екран 1: каталог -->
+  <div id="catalog">
+    <div class="top">
+      <div class="logo">☕</div>
+      <div><h1 id="shopName">Urban Coffee</h1><p id="shopSub">Замовлення онлайн · доставка або самовивіз</p></div>
+    </div>
+    <div class="cats" id="cats"></div>
+    <div id="products"></div>
+  </div>
+
+  <!-- Екран 2: оформлення -->
+  <div id="checkout" class="hidden fade">
+    <div class="back-link" id="backLink">‹ До каталогу</div>
+    <div class="section-title" style="padding-top:18px">Ваше замовлення</div>
+    <div class="card-list" id="cartList"></div>
+
+    <div class="section-title">Отримання</div>
+    <div class="seg" id="seg">
+      <div data-v="pickup" class="sel">Самовивіз</div>
+      <div data-v="delivery">Доставка</div>
+    </div>
+
+    <div class="section-title">Контакти</div>
+    <div class="card-list">
+      <div class="field"><label for="name">Ім'я</label>
+        <input id="name" maxlength="40" placeholder="Як до вас звертатися" autocomplete="given-name"></div>
+      <div class="field"><label for="phone">Телефон</label>
+        <input id="phone" type="tel" maxlength="19" placeholder="+380 67 123 45 67" autocomplete="tel"></div>
+      <div class="field hidden" id="addrField"><label for="address">Адреса доставки</label>
+        <input id="address" maxlength="120" placeholder="Вулиця, будинок, квартира"></div>
+      <div class="field"><label for="comment">Коментар</label>
+        <textarea id="comment" rows="2" maxlength="200" placeholder="Наприклад: без цукру, на 15:00"></textarea></div>
+    </div>
+    <div class="err" id="err"></div>
+
+    <div class="section-title">Разом</div>
+    <div class="card-list sum" id="sum"></div>
+    <div class="note">Оплата при отриманні — готівкою або карткою.</div>
+  </div>
+</div>
+
+<button class="fallback-btn" id="fallbackBtn">Кошик</button>
+
+<script>
+(function () {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const inTelegram = !!(tg && (tg.initData || (tg.platform && tg.platform !== "unknown") ||
+    /tgWebApp/.test(location.hash) || window.TelegramWebviewProxy || window.parent !== window));
+
+  // ---------- Каталог (бот передає його в посиланні) ----------
+  const DEFAULT = {
+    n: "Urban Coffee", d: 60, f: 500,
+    c: [["coffee", "Кава"], ["tea", "Чай і не тільки"], ["dessert", "Десерти"], ["beans", "Зерно"]],
+    p: [
+      ["esp", "coffee", "Еспресо", 45, "☕", "Подвійна порція, 60 мл"],
+      ["cap", "coffee", "Капучино", 70, "☕", "250 мл, класичне молоко"],
+      ["lat", "coffee", "Лате на вівсяному", 85, "🥛", "350 мл, вівсяне молоко"],
+      ["raf", "coffee", "Раф ванільний", 95, "🍦", "350 мл, вершки та ваніль"],
+      ["mat", "tea", "Матча лате", 90, "🍵", "350 мл, японська матча"],
+      ["cho", "tea", "Какао з маршмелоу", 80, "🍫", "300 мл"],
+      ["cro", "dessert", "Круасан", 65, "🥐", "Вершкове масло, свіжа випічка"],
+      ["chs", "dessert", "Чизкейк Нью-Йорк", 110, "🍰", "Класичний, 150 г"],
+      ["cok", "dessert", "Печиво з шоколадом", 40, "🍪", "Бельгійський шоколад"],
+      ["eth", "beans", "Ефіопія Іргачеф", 420, "📦", "250 г · ягоди, квіти"],
+      ["bra", "beans", "Бразилія Сантос", 360, "📦", "250 г · горіх, шоколад"]
+    ]
+  };
+  function decodePayload() {
+    try {
+      const raw = new URLSearchParams(location.search).get("p");
+      if (!raw) return DEFAULT;
+      const b64 = raw.replace(/-/g, "+").replace(/_/g, "/");
+      const bin = atob(b64 + "===".slice((b64.length + 3) % 4));
+      const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+      return Object.assign({}, DEFAULT, JSON.parse(new TextDecoder().decode(bytes)));
+    } catch (e) { return DEFAULT; }
+  }
+  const CFG = decodePayload();
+  const P = Object.fromEntries(CFG.p.map(([id, cat, name, price, emoji, desc]) => [id, { id, cat, name, price, emoji, desc }]));
+
+  const state = { cat: "all", cart: {}, mode: "catalog", delivery: "pickup" };
+  const $ = id => document.getElementById(id);
+  const haptic = () => { try { tg.HapticFeedback.impactOccurred("light"); } catch (e) {} };
+  const money = n => `${n} ₴`;
+
+  // Пастельний фон під емодзі — стабільний колір для кожного товару
+  function tint(id) {
+    let h = 0; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) % 360;
+    return `linear-gradient(135deg, hsla(${h},70%,75%,.35), hsla(${(h + 40) % 360},70%,65%,.25))`;
+  }
+
+  $("shopName").textContent = CFG.n;
+  $("shopSub").textContent = CFG.d
+    ? `Доставка ${money(CFG.d)}${CFG.f ? ` · безкоштовно від ${money(CFG.f)}` : ""} · або самовивіз`
+    : "Замовлення онлайн · самовивіз";
+
+  if (tg) {
+    tg.ready(); tg.expand();
+    try { tg.setHeaderColor("secondary_bg_color"); tg.setBackgroundColor("secondary_bg_color"); } catch (e) {}
+    const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
+    if (u && u.first_name) $("name").value = u.first_name;
+  }
+  if (!inTelegram) { $("fallbackBtn").style.display = "block"; $("backLink").style.display = "block"; }
+
+  // ---------- Підрахунки ----------
+  const count = () => Object.values(state.cart).reduce((a, b) => a + b, 0);
+  const subtotal = () => Object.entries(state.cart).reduce((s, [id, q]) => s + P[id].price * q, 0);
+  const deliveryCost = () => state.delivery === "delivery" && !(CFG.f && subtotal() >= CFG.f) ? CFG.d : 0;
+  const total = () => subtotal() + deliveryCost();
+
+  function change(id, delta) {
+    const q = Math.max(0, Math.min(20, (state.cart[id] || 0) + delta));
+    if (q) state.cart[id] = q; else delete state.cart[id];
+    haptic();
+    if (state.mode === "catalog") renderProducts(); else renderCheckout();
+    if (state.mode === "checkout" && !count()) showCatalog();
+    updateButton();
+  }
+
+  // ---------- Каталог ----------
+  function renderCats() {
+    const cats = [["all", "Усе"], ...CFG.c];
+    $("cats").innerHTML = cats.map(([id, name]) =>
+      `<div class="cat ${state.cat === id ? "sel" : ""}" data-c="${id}">${name}</div>`).join("");
+    $("cats").querySelectorAll(".cat").forEach(el => el.onclick = () => {
+      state.cat = el.dataset.c; haptic(); renderCats(); renderProducts();
+    });
+  }
+
+  function productCard(p) {
+    const q = state.cart[p.id] || 0;
+    const ctrl = q
+      ? `<div class="qty"><button data-a="-" data-id="${p.id}">−</button><span>${q}</span><button class="plus" data-a="+" data-id="${p.id}">+</button></div>`
+      : `<button class="add" data-a="+" data-id="${p.id}">Додати</button>`;
+    return `<div class="card">
+      <div class="pic" style="background:${tint(p.id)}">${p.emoji}${q ? `<div class="badge">${q}</div>` : ""}</div>
+      <div class="body"><div class="name">${p.name}</div><div class="desc">${p.desc || ""}</div>
+        <div class="row"><div class="price">${money(p.price)}</div>${ctrl}</div></div></div>`;
+  }
+
+  function renderProducts() {
+    const groups = CFG.c.filter(([id]) => state.cat === "all" || state.cat === id);
+    $("products").innerHTML = groups.map(([cid, cname]) => {
+      const items = CFG.p.filter(x => x[1] === cid).map(x => P[x[0]]);
+      if (!items.length) return "";
+      return `<div class="section-title">${cname}</div><div class="grid">${items.map(productCard).join("")}</div>`;
+    }).join("");
+    $("products").querySelectorAll("button[data-a]").forEach(b =>
+      b.onclick = () => change(b.dataset.id, b.dataset.a === "+" ? 1 : -1));
+  }
+
+  // ---------- Оформлення ----------
+  function renderCheckout() {
+    $("cartList").innerHTML = Object.entries(state.cart).map(([id, q]) => {
+      const p = P[id];
+      return `<div class="line"><div class="mini" style="background:${tint(id)}">${p.emoji}</div>
+        <div class="info"><div class="n">${p.name}</div><div class="s">${money(p.price)} × ${q} = ${money(p.price * q)}</div></div>
+        <div class="qty"><button data-a="-" data-id="${id}">−</button><span>${q}</span><button class="plus" data-a="+" data-id="${id}">+</button></div></div>`;
+    }).join("");
+    $("cartList").querySelectorAll("button[data-a]").forEach(b =>
+      b.onclick = () => change(b.dataset.id, b.dataset.a === "+" ? 1 : -1));
+
+    $("addrField").classList.toggle("hidden", state.delivery !== "delivery");
+    const dc = deliveryCost();
+    const dLabel = state.delivery === "delivery" ? (dc ? money(dc) : "безкоштовно") : "самовивіз";
+    $("sum").innerHTML = `
+      <div class="r"><span class="k">Товари (${count()})</span><span>${money(subtotal())}</span></div>
+      <div class="r"><span class="k">Доставка</span><span>${dLabel}</span></div>
+      <div class="r total"><span class="k">До сплати</span><span class="v">${money(total())}</span></div>`;
+  }
+
+  $("seg").querySelectorAll("div").forEach(el => el.onclick = () => {
+    state.delivery = el.dataset.v; haptic();
+    $("seg").querySelectorAll("div").forEach(x => x.classList.toggle("sel", x === el));
+    $("err").textContent = ""; renderCheckout(); updateButton();
+  });
+
+  function showCheckout() {
+    state.mode = "checkout";
+    $("catalog").classList.add("hidden"); $("checkout").classList.remove("hidden");
+    window.scrollTo({ top: 0 });
+    renderCheckout(); updateButton();
+    if (inTelegram) { try { tg.BackButton.show(); } catch (e) {} }
+  }
+  function showCatalog() {
+    state.mode = "catalog";
+    $("checkout").classList.add("hidden"); $("catalog").classList.remove("hidden");
+    renderProducts(); updateButton();
+    if (inTelegram) { try { tg.BackButton.hide(); } catch (e) {} }
+  }
+
+  function validate() {
+    const digits = $("phone").value.replace(/\D/g, "");
+    if ($("name").value.trim().length < 2) return "Вкажіть ім'я";
+    if (digits.length < 10 || digits.length > 13) return "Вкажіть коректний номер телефону";
+    if (state.delivery === "delivery" && $("address").value.trim().length < 5) return "Вкажіть адресу доставки";
+    return "";
+  }
+
+  // ---------- Головна кнопка ----------
+  function buttonText() {
+    if (state.mode === "catalog") return `Кошик · ${count()} · ${money(total())}`;
+    return `Замовити · ${money(total())}`;
+  }
+  function updateButton() {
+    const show = count() > 0;
+    if (inTelegram) {
+      const mb = tg.MainButton;
+      if (show) { mb.setText(buttonText()); mb.show(); } else mb.hide();
+    } else {
+      $("fallbackBtn").textContent = show ? buttonText() : "Кошик порожній";
+      $("fallbackBtn").disabled = !show;
+    }
+  }
+
+  function onMain() {
+    if (!count()) return;
+    if (state.mode === "catalog") { showCheckout(); return; }
+    const err = validate();
+    $("err").textContent = err;
+    if (err) { try { tg.HapticFeedback.notificationOccurred("error"); } catch (e) {} return; }
+    const data = {
+      items: Object.entries(state.cart),          // [[id, qty], ...] — ціни бот рахує сам
+      delivery: state.delivery,
+      address: state.delivery === "delivery" ? $("address").value.trim() : "",
+      name: $("name").value.trim(), phone: $("phone").value.trim(),
+      comment: $("comment").value.trim()
+    };
+    if (inTelegram) {
+      try { tg.HapticFeedback.notificationOccurred("success"); } catch (e) {}
+      tg.sendData(JSON.stringify(data));
+    } else {
+      alert("Демо-режим (поза Telegram):\n" + JSON.stringify(data, null, 2));
+    }
+  }
+
+  ["name", "phone", "address", "comment"].forEach(id => $(id).addEventListener("input", () => { $("err").textContent = ""; }));
+  $("phone").addEventListener("input", e => { e.target.value = e.target.value.replace(/[^\d+ ]/g, ""); });
+  if (inTelegram) {
+    tg.MainButton.onClick(onMain);
+    try { tg.BackButton.onClick(showCatalog); } catch (e) {}
+  }
+  $("fallbackBtn").onclick = onMain;
+  $("backLink").onclick = showCatalog;
+
+  renderCats(); renderProducts(); updateButton();
+})();
+</script>
+</body>
+</html>
